@@ -8,87 +8,128 @@ import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
-public class MainActivity extends AppCompatActivity {
 
-    // Model: Record (intents=puntuació, nom)
+public class MainActivity extends AppCompatActivity {
+    ArrayList<String> imageNames;  // Lista de nombres de imágenes en res
+
     class Record {
         public int intents;
         public String nom;
+        // Nueva propiedad para almacenar el recurso de imagen
+        private int imageResource;
 
-        public Record(int _intents, String _nom ) {
+        public Record(int _intents, String _nom) {
             intents = _intents;
             nom = _nom;
         }
+
+        public int getIntents() {
+            return intents;
+        }
+
+        public void setIntents(int intents) {
+            this.intents = intents;
+        }
+
+        public int getImageResource() {
+            return imageResource;
+        }
+
+        public void setImageResource(int imageResource) {
+            this.imageResource = imageResource;
+        }
     }
-    // Model = Taula de records: utilitzem ArrayList
+
     ArrayList<Record> records;
-
-    // ArrayAdapter serà l'intermediari amb la ListView
     ArrayAdapter<Record> adapter;
-
-    //ArrayList<String> nombres = generarNombresAleatorios(15);
-    //ArrayList<String> apellidos = generarApellidosAleatorios(15);
-    //ArrayList<Integer> numeros = generarNumerosAleatorios(15, 1, 10);
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        imageNames = new ArrayList<>();
+        imageNames.add("elden_ring");
+        imageNames.add("fresa");
+        imageNames.add("mango");
+        imageNames.add("monster_hunter");
+        imageNames.add("image1");
 
         // Inicialitzem model
-        records = new ArrayList<Record>();
+        records = new ArrayList<>();
         // Afegim alguns exemples
-        records.add( new Record(33,"Manolo") );
-        records.add( new Record(12,"Pepe") );
-        records.add( new Record(42,"Laura") );
-
-
+        records.add(new Record(randomNumber(1,20), generarNombreAleatorio()+" "+generarApellidoAleatorio()));
+        records.add(new Record(randomNumber(1,20), generarNombreAleatorio()+" "+generarApellidoAleatorio()));
+        records.add(new Record(randomNumber(1,20), generarNombreAleatorio()+" "+generarApellidoAleatorio()));
 
         // Inicialitzem l'ArrayAdapter amb el layout pertinent
-        adapter = new ArrayAdapter<Record>( this, R.layout.list_item, records )
-        {
+        adapter = new ArrayAdapter<Record>(this, R.layout.list_item, records) {
             @Override
-            public View getView(int pos, View convertView, ViewGroup container)
-            {
-                // getView ens construeix el layout i hi "pinta" els valors de l'element en la posició pos
-                if( convertView==null ) {
-                    // inicialitzem l'element la View amb el seu layout
+            public View getView(int pos, View convertView, ViewGroup container) {
+                if (convertView == null) {
                     convertView = getLayoutInflater().inflate(R.layout.list_item, container, false);
                 }
+
                 // "Pintem" valors (també quan es refresca)
                 ((TextView) convertView.findViewById(R.id.nom)).setText(getItem(pos).nom);
                 ((TextView) convertView.findViewById(R.id.intents)).setText(Integer.toString(getItem(pos).intents));
-                ((ImageView) convertView.findViewById(R.id.imageView0)).setImageResource(R.drawable.elden_ring);
+
+                // Verifica si ya se ha asignado una imagen a este elemento
+                if (getItem(pos).getImageResource() == 0) {
+                    // Si no se ha asignado, elige una imagen aleatoria
+                    int imageResourceId = getRandomImageResource();
+                    getItem(pos).setImageResource(imageResourceId);
+                }
+
+                // Establece la imagen correspondiente
+                ((ImageView) convertView.findViewById(R.id.imageView0)).setImageResource(getItem(pos).getImageResource());
+
                 return convertView;
             }
-
         };
 
-        // busquem la ListView i li endollem el ArrayAdapter
-        //ListView lv = (ListView) findViewById(R.id.recordsView);
-        ListView lv = (ListView) findViewById(R.id.recordViews);
+        ListView lv = findViewById(R.id.recordViews);
         lv.setAdapter(adapter);
 
         // botó per afegir entrades a la ListView
-        Button b = (Button) findViewById(R.id.button);
+        Button b = findViewById(R.id.button);
         b.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for (int i=0;i< randomNumber(15,20) ;i++) {
-                    records.add(new Record(generarNumeroAleatorio(1,10), generarNombreAleatorio()+" "+generarApellidoAleatorio()));
+                for (int i = 0; i < randomNumber(15, 20); i++) {
+                    records.add(new Record(randomNumber(1, 20), generarNombreAleatorio() + " " + generarApellidoAleatorio()));
                 }
                 // notificar l'adapter dels canvis al model
                 adapter.notifyDataSetChanged();
             }
         });
+
+        Button b1 = findViewById(R.id.button1);
+        b1.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ordenarRecords();
+                adapter.notifyDataSetChanged();
+            }
+        });
     }
 
-    public int randomNumber(int min, int max){
-        return ThreadLocalRandom.current().nextInt(min,max);
+    public void ordenarRecords() {
+        Collections.sort(records, new Comparator<Record>() {
+            @Override
+            public int compare(Record o1, Record o2) {
+                return Integer.compare(o1.getIntents(), o2.getIntents());
+            }
+        });
+    }
+
+    public int randomNumber(int min, int max) {
+        return ThreadLocalRandom.current().nextInt(min, max);
     }
 
     public String generarNombreAleatorio() {
@@ -103,11 +144,9 @@ public class MainActivity extends AppCompatActivity {
         return apellidos[rand.nextInt(apellidos.length)];
     }
 
-    public int generarNumeroAleatorio(int min, int max) {
-        if (min > max) {
-            throw new IllegalArgumentException("El valor mínimo debe ser menor o igual al valor máximo.");
-        }
+    private int getRandomImageResource() {
         Random rand = new Random();
-        return rand.nextInt((max - min) + 1) + min;
+        String randomImageName = imageNames.get(rand.nextInt(imageNames.size()));
+        return getResources().getIdentifier(randomImageName, "drawable", getPackageName());
     }
 }
